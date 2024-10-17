@@ -1,0 +1,87 @@
+import pyttsx3
+import pyaudio
+import datetime
+import speech_recognition as sr
+import wikipedia
+
+# Initialize the text-to-speech engine
+engine = pyttsx3.init('sapi5')
+voices = engine.getProperty('voices')
+
+# Set the voice to the first one in the list
+engine.setProperty('voice', voices[0].id)
+
+def speak(audio):
+    """Convert text to speech."""
+    engine.say(audio)
+    engine.runAndWait()
+
+def wishMe():
+    """Wish the user based on the current time."""
+    hour = int(datetime.datetime.now().hour)
+    if hour < 12:
+        speak("Good Morning Sir!")
+    elif hour < 18:
+        speak("Good Afternoon Sir!")
+    else:
+        speak("Good Evening Sir!")
+
+    speak("I am Kai. How can I help you?")
+
+def takeCommand():
+    """Listen for commands from the user and recognize speech."""
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        r.pause_threshold = 1
+        print("Listening...")
+        audio = r.listen(source)
+
+        try:
+            # Using recognize_google for speech recognition
+            query = r.recognize_google(audio, language="en-IN")
+            print(f"User Said: {query}")
+            return query
+        except sr.UnknownValueError:
+            print("Sorry, I did not understand that.")
+            speak("Sorry, I did not understand that.")
+            return None
+        except sr.RequestError:
+            print("Could not request results; check your network connection.")
+            speak("Could not request results; check your network connection.")
+            return None
+
+if __name__ == '__main__':
+    wishMe()
+
+    while True:
+        text = takeCommand()
+
+        if text:
+            # Check if the command includes 'stop listening'
+            if 'stop listening' in text.lower():
+                speak("Okay, I will stop listening now.")
+                break
+
+            # Check if the command includes 'please tell me about'
+            if 'please tell me about' in text.lower():
+                topic = text.lower().replace("please tell me about", "").strip()  # Extract topic
+                if topic:  # Ensure the topic is not empty
+                    speak(f"Searching Wikipedia for {topic}...")
+                    try:
+                        results = wikipedia.summary(topic, sentences=4)  # Get a summary from Wikipedia
+                        speak("According to Wikipedia:")
+                        speak(results)
+                        print(results)
+                    except wikipedia.exceptions.DisambiguationError:
+                        speak("There are multiple results for that query. Please be more specific.")
+                    except wikipedia.exceptions.PageError:
+                        speak("I couldn't find any page for that query.")
+                    except Exception as e:
+                        speak("An error occurred while searching Wikipedia.")
+                        print(f"Error: {e}")  # Print the error for debugging
+                else:
+                    speak("Please specify a topic to search.")
+            else:
+                speak("I can only search Wikipedia if you say please tell me about something.")
+        else:
+            speak("Please speak again.")
